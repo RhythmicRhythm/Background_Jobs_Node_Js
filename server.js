@@ -1,45 +1,33 @@
 const Queue = require("bull");
 const Redis = require("ioredis");
 
+// now 2nd branch
 const redisConfig = {
-  port: 6379, // Default Redis port
-  host: "localhost", // Default Redis host (if Redis is running on a different host, update this)
-  // Add any other Redis configuration options here if needed
+  port: 6379, 
+  host: "localhost", 
+  
 };
 
 const redisClient = new Redis(redisConfig);
-const queue = new Queue("squares", { redis: redisClient });
+const queue = new Queue("countdown", { redis: redisClient });
 
-// Simulate a long-running task to calculate the square of a number
-function calculateSquare(number) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(number * number);
-    }, 1000); // Simulate 1-second processing time
-  });
+function countDown() {
+  let count = 10;
+  const interval = setInterval(() => {
+    console.log(count);
+    count--;
+    if (count === 0) {
+      clearInterval(interval);
+      console.log("Countdown completed!");
+    }
+  }, 10000); 
 }
 
-// Define the worker to process the tasks
 queue.process(async (job) => {
-  const { number } = job.data;
-  console.log(`Processing square for ${number}...`);
-  const result = await calculateSquare(number);
-
-  // Store the result in Redis for caching
-  await job.updateProgress(100); // Update progress to 100% to indicate completion
-  await job.moveToCompleted(result); // Move the job to the completed state
-  await job.remove(); // Remove the job from the queue after completion
-
-  console.log(`Square for ${number} is ${result}`);
+  console.log("Countdown job started");
+  countDown();
 });
 
-// Enqueue multiple tasks
-async function enqueueTasks() {
-  const numbers = [2, 4, 6, 8, 10];
-  for (const number of numbers) {
-    const job = await queue.add({ number }, { jobId: `square_${number}` });
-    console.log(`Enqueued square calculation for ${number}, job ID: ${job.id}`);
-  }
-}
+queue.add({});
 
-enqueueTasks();
+console.log("Enqueued countdown job");
