@@ -1,6 +1,7 @@
 const Queue = require("bull");
 const Redis = require("ioredis");
 
+// now 2nd branch
 const redisConfig = {
   port: 6379, 
   host: "localhost", 
