@@ -1,0 +1,17 @@
+{
+  "name": "backend_job_2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bull": "^4.10.4",
+    "ioredis": "^5.3.2",
+    "nodemon": "^3.0.1"
+  }
+}
