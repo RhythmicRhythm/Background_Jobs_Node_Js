@@ -1,5 +1,9 @@
+const express = require("express");
 const Queue = require("bull");
 const Redis = require("ioredis");
+const axios = require("axios");
+
+const app = express();
 
 const redisConfig = {
   port: 6379, // Default Redis port
@@ -8,38 +12,48 @@ const redisConfig = {
 };
 
 const redisClient = new Redis(redisConfig);
-const queue = new Queue("squares", { redis: redisClient });
+const queue = new Queue("get_api", { redis: redisClient });
 
-// Simulate a long-running task to calculate the square of a number
-function calculateSquare(number) {
-  return new Promise((resolve) => {
+async function makeGetRequest() {
+  try {
+    const options = {
+      method: "GET",
+      url: "https://dad-jokes.p.rapidapi.com/random/joke",
+      headers: {
+        "X-RapidAPI-Key": "46ca430eb6msh3416c4c0af4718bp1ab2afjsnc1b94a30f3bf", // Replace with your actual RapidAPI key
+        "X-RapidAPI-Host": "dad-jokes.p.rapidapi.com",
+      },
+    };
+
+    const response = await axios.request(options);
+    const { setup, punchline } = response.data.body[0];
+    console.log(`${setup}`);
+
     setTimeout(() => {
-      resolve(number * number);
-    }, 1000); // Simulate 1-second processing time
-  });
-}
-
-// Define the worker to process the tasks
-queue.process(async (job) => {
-  const { number } = job.data;
-  console.log(`Processing square for ${number}...`);
-  const result = await calculateSquare(number);
-
-  // Store the result in Redis for caching
-  await job.updateProgress(100); // Update progress to 100% to indicate completion
-  await job.moveToCompleted(result); // Move the job to the completed state
-  await job.remove(); // Remove the job from the queue after completion
-
-  console.log(`Square for ${number} is ${result}`);
-});
-
-// Enqueue multiple tasks
-async function enqueueTasks() {
-  const numbers = [2, 4, 6, 8, 10];
-  for (const number of numbers) {
-    const job = await queue.add({ number }, { jobId: `square_${number}` });
-    console.log(`Enqueued square calculation for ${number}, job ID: ${job.id}`);
+      console.log(` ${punchline}`);
+    }, 10000);
+  } catch (error) {
+    console.error("Error making the API GET request:", error.message);
   }
 }
 
-enqueueTasks();
+queue.process(async (job) => {
+  console.log("Making API GET request...");
+  await makeGetRequest();
+});
+
+// Enqueue the job every 20 seconds
+setInterval(async () => {
+  await queue.add({}, { repeat: { cron: "*/20 * * * * *" } });
+}, 10000); // 20000 milliseconds = 20 seconds
+
+app.get("/", (req, res) => {
+  res.send(
+    "Express server is running! The background job is enqueued to make a GET request to the API every 20 seconds."
+  );
+});
+
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`Express server listening on port ${PORT}`);
+});
